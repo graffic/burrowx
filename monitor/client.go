@@ -52,7 +52,7 @@ func NewKafkaClient(cfg *config.Config, cluster string) (*KafkaClient, error) {
 	// Set up sarama config from profile
 	clientConfig := sarama.NewConfig()
 	profile := cfg.ClientProfile[cfg.Kafka[cluster].ClientProfile]
-	clientConfig.ClientID = profile.ClientId
+	clientConfig.ClientID = profile.ClientID
 	clientConfig.Net.TLS.Enable = profile.TLS
 	if profile.TLSCertFilePath == "" || profile.TLSKeyFilePath == "" || profile.TLSCAFilePath == "" {
 		clientConfig.Net.TLS.Config = &tls.Config{}
@@ -92,7 +92,7 @@ func NewKafkaClient(cfg *config.Config, cluster string) (*KafkaClient, error) {
 		return nil, err
 	}
 
-	importer, err := NewImporter(cfg)
+	importer, err := NewImporter(&cfg.InfluxDB)
 	if err != nil {
 		return nil, err
 	}

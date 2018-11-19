@@ -6,9 +6,21 @@ import (
 	"os"
 )
 
+// InfluxDB Configuration
+type InfluxDB struct {
+	Db          string            `json:"db"`
+	Enable      bool              `json:"enable"`
+	Hosts       string            `json:"hosts"`
+	Pwd         string            `json:"pwd"`
+	Username    string            `json:"username"`
+	Measurement string            `json:"measurement"`
+	ExtraTags   map[string]string `json:"extra_tags"`
+}
+
+// Config parameters for burrowx
 type Config struct {
 	General struct {
-		ClientId       string `json:"clientId"`
+		ClientID       string `json:"clientId"`
 		GroupBlacklist string `json:"groupBlacklist"`
 		Logconfig      string `json:"logconfig"`
 		Pidfile        string `json:"pidfile"`
@@ -16,18 +28,11 @@ type Config struct {
 		TopicFilter string `json:"topicFilter"`
 	} `json:"general"`
 
-	Influxdb struct {
-		Db       string `json:"db"`
-		Enable   bool   `json:"enable"`
-		Hosts    string `json:"hosts"`
-		Pwd      string `json:"pwd"`
-		Username string `json:"username"`
-	} `json:"influxdb"`
+	InfluxDB InfluxDB `json:"influxdb"`
 
 	Kafka map[string]*struct {
 		Brokers       string `json:"brokers"`
 		Zookeepers    string `json:"zookeepers"`
-		OffsetTopic   string `json:"offsetTopic"`
 		ClientProfile string `json:"ClientProfile"`
 		OffsetsTopic  string `gcfg:"offsetsTopic"`
 
@@ -38,16 +43,17 @@ type Config struct {
 	} `json:"kafka"`
 
 	Zookeeper struct {
-		Hosts     string `json:"hosts"`
-		Lock_path string `json:"lock-path"`
-		Timeout   int    `json:"timeout"`
+		Hosts    string `json:"hosts"`
+		LockPath string `json:"lock-path"`
+		Timeout  int    `json:"timeout"`
 	} `json:"zookeeper"`
 
 	ClientProfile map[string]*Profile `json:"ClientProfile"`
 }
 
+// Profile for kafka client
 type Profile struct {
-	ClientId        string `json:"clientId"`
+	ClientID        string `json:"clientId"`
 	TLS             bool   `json:"tls"`
 	TLSNoVerify     bool   `json:"tlsNoverify"`
 	TLSCertFilePath string `json:"tlsCertfilepath"`
@@ -55,6 +61,7 @@ type Profile struct {
 	TLSCAFilePath   string `json:"tlsCafilepath"`
 }
 
+// ReadConfig from a string to a Config structure
 func ReadConfig(cfgFile string) *Config {
 	var cfg Config
 	f, err := os.OpenFile(cfgFile, os.O_RDONLY, 0660)
@@ -62,24 +69,28 @@ func ReadConfig(cfgFile string) *Config {
 	err = json.NewDecoder(f).Decode(&cfg)
 	errAndExit(err)
 
-	cfg.Init()
+	cfg.init()
 	return &cfg
 }
 
-func (cfg *Config) Init() {
+func (cfg *Config) init() {
 	if cfg.ClientProfile == nil {
 		cfg.ClientProfile = make(map[string]*Profile)
 	}
 	if _, ok := cfg.ClientProfile["default"]; !ok {
 		cfg.ClientProfile["default"] = &Profile{
-			ClientId: cfg.General.ClientId,
+			ClientID: cfg.General.ClientID,
 			TLS:      false,
 		}
 	}
 
+	if cfg.InfluxDB.Measurement == "" {
+		cfg.InfluxDB.Measurement = "consumer_metrics"
+	}
+
 	for _, k := range cfg.Kafka {
-		if k.OffsetTopic == "" {
-			k.OffsetTopic = "__consumer_offsets"
+		if k.OffsetsTopic == "" {
+			k.OffsetsTopic = "__consumer_offsets"
 		}
 		if k.ClientProfile == "" {
 			k.ClientProfile = "default"

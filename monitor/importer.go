@@ -11,7 +11,7 @@ import (
 
 type Importer struct {
 	msgs chan *ConsumerFullOffset
-	cfg  *config.Config
+	cfg  *config.InfluxDB
 
 	threshold  int
 	maxTimeGap int64
@@ -19,7 +19,7 @@ type Importer struct {
 	stopped    chan struct{}
 }
 
-func NewImporter(cfg *config.Config) (i *Importer, err error) {
+func NewImporter(cfg *config.InfluxDB) (i *Importer, err error) {
 	i = &Importer{
 		msgs:       make(chan *ConsumerFullOffset, 1000),
 		cfg:        cfg,
@@ -29,9 +29,9 @@ func NewImporter(cfg *config.Config) (i *Importer, err error) {
 	}
 	// Create a new HTTPClient
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     cfg.Influxdb.Hosts,
-		Username: cfg.Influxdb.Username,
-		Password: cfg.Influxdb.Pwd,
+		Addr:     cfg.Hosts,
+		Username: cfg.Username,
+		Password: cfg.Pwd,
 	})
 	if err != nil {
 		return
@@ -41,13 +41,13 @@ func NewImporter(cfg *config.Config) (i *Importer, err error) {
 }
 
 func (i *Importer) start() {
-	_, err := i.runCmd("create database " + i.cfg.Influxdb.Db)
+	_, err := i.runCmd("create database " + i.cfg.Db)
 	if err != nil {
 		panic(err)
 	}
 	go func() {
 		bp, _ := client.NewBatchPoints(client.BatchPointsConfig{
-			Database:  i.cfg.Influxdb.Db,
+			Database:  i.cfg.Db,
 			Precision: "s",
 		})
 		lastCommit := time.Now().Unix()
@@ -64,8 +64,12 @@ func (i *Importer) start() {
 				"lag":     msg.MaxOffset - msg.Offset,
 			}
 
+			for k, v := range i.cfg.ExtraTags {
+				fields[k] = v
+			}
+
 			tm := time.Unix(msg.Timestamp/1000, 0)
-			pt, err := client.NewPoint("consumer_metrics", tags, fields, tm)
+			pt, err := client.NewPoint(i.cfg.Measurement, tags, fields, tm)
 			if err != nil {
 				log.Error("error in add point ", err.Error())
 				continue
@@ -74,7 +78,7 @@ func (i *Importer) start() {
 			if len(bp.Points()) > i.threshold || time.Now().Unix()-lastCommit >= i.maxTimeGap {
 				err := i.influxdb.Write(bp)
 				bp, _ = client.NewBatchPoints(client.BatchPointsConfig{
-					Database:  i.cfg.Influxdb.Db,
+					Database:  i.cfg.Db,
 					Precision: "s",
 				})
 				lastCommit = time.Now().Unix()
@@ -102,7 +106,7 @@ func (i *Importer) stop() {
 func (i *Importer) runCmd(cmd string) (res []client.Result, err error) {
 	q := client.Query{
 		Command:  cmd,
-		Database: i.cfg.Influxdb.Db,
+		Database: i.cfg.Db,
 	}
 	if response, err := i.influxdb.Query(q); err == nil {
 		if response.Error() != nil {

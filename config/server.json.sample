@@ -41,6 +41,14 @@
     "hosts": "http://localhost:8086",
     "db": "burrowx",
     "username": "",
-    "pwd": ""
+    "pwd": "",
+
+    "@desc": "By default consumer_metrics",
+    "measurement": "measurement_name_for_influx",
+
+    "@desc": "No extra tags if missing",
+    "extra_tags": {
+      "env": "production"
+    }
   }
 }
