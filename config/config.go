@@ -9,7 +9,6 @@ import (
 // InfluxDB Configuration
 type InfluxDB struct {
 	Db          string            `json:"db"`
-	Enable      bool              `json:"enable"`
 	Hosts       string            `json:"hosts"`
 	Pwd         string            `json:"pwd"`
 	Username    string            `json:"username"`
