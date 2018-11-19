@@ -158,7 +158,7 @@ func (client *KafkaClient) Start() {
 	}()
 
 	// Get a partition count for the consumption topic
-	log.Info("start to consumer from", client.cfg.Kafka[client.cluster].OffsetsTopic)
+	log.Info("start to consumer from ", client.cfg.Kafka[client.cluster].OffsetsTopic)
 	partitions, err := client.client.Partitions(client.cfg.Kafka[client.cluster].OffsetsTopic)
 	if err != nil {
 		panic(err)
