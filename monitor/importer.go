@@ -57,15 +57,16 @@ func (i *Importer) start() {
 				"consumer_group": msg.Group,
 				"cluster":        msg.Cluster,
 			}
+
+			for k, v := range i.cfg.ExtraTags {
+				tags[k] = v
+			}
+
 			//offset is the sql keyword, so we use offsize
 			fields := map[string]interface{}{
 				"offsize": msg.Offset,
 				"logsize": msg.MaxOffset,
 				"lag":     msg.MaxOffset - msg.Offset,
-			}
-
-			for k, v := range i.cfg.ExtraTags {
-				fields[k] = v
 			}
 
 			tm := time.Unix(msg.Timestamp/1000, 0)
