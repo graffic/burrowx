@@ -397,6 +397,12 @@ func (client *KafkaClient) RefreshConsumerOffset(msg *sarama.ConsumerMessage) {
 	var partition uint32
 	var offset, timestamp uint64
 
+	// Tombstone
+	if len(msg.Value) == 0 {
+		log.Debugf("Tombstone for key:%v", string(msg.Key[:]))
+		return
+	}
+
 	buf := bytes.NewBuffer(msg.Key)
 	err := binary.Read(buf, binary.BigEndian, &keyver)
 	switch keyver {
