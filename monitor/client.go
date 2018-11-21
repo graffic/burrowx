@@ -386,7 +386,9 @@ func (client *KafkaClient) GetPartitionCount(topic string) int {
 }
 
 func decodeWarning(problem string, msg *sarama.ConsumerMessage, err error) {
-	log.Warnf("Failed to decode %s t:%s p:%v o:%v e:%v key:%v value:%v", problem, msg.Topic, msg.Partition, msg.Offset, err, msg.Key, msg.Value)
+	log.Warnf(
+		"Failed to decode %s t:%s p:%v o:%v e:%v key:%v value:%v",
+		problem, msg.Topic, msg.Partition, msg.Offset, err, string(msg.Key[:]), string(msg.Value[:]))
 }
 
 func (client *KafkaClient) RefreshConsumerOffset(msg *sarama.ConsumerMessage) {
