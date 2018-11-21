@@ -8,3 +8,5 @@ vendor.json
 .idea
 Burrow.iml
 tmp
+# Local compile
+burrowx
