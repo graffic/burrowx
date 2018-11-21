@@ -385,6 +385,10 @@ func (client *KafkaClient) GetPartitionCount(topic string) int {
 	return client.topicMap[topic]
 }
 
+func decodeWarning(problem string, msg *sarama.ConsumerMessage, err error) {
+	log.Warnf("Failed to decode %s t:%s p:%v o:%v e:%v key:%v value:%v", problem, msg.Topic, msg.Partition, msg.Offset, err, msg.Key, msg.Value)
+}
+
 func (client *KafkaClient) RefreshConsumerOffset(msg *sarama.ConsumerMessage) {
 	var keyver, valver uint16
 	var group, topic string
@@ -397,17 +401,17 @@ func (client *KafkaClient) RefreshConsumerOffset(msg *sarama.ConsumerMessage) {
 	case 0, 1:
 		group, err = readString(buf)
 		if err != nil {
-			log.Warnf("Failed to decode %s:%v offset %v: group", msg.Topic, msg.Partition, msg.Offset)
+			log.Warnf("Failed to decode %s:%v offset %v: group. Error: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			return
 		}
 		topic, err = readString(buf)
 		if err != nil {
-			log.Warnf("Failed to decode %s:%v offset %v: topic", msg.Topic, msg.Partition, msg.Offset)
+			log.Warnf("Failed to decode %s:%v offset %v: topic. Error: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			return
 		}
 		err = binary.Read(buf, binary.BigEndian, &partition)
 		if err != nil {
-			log.Warnf("Failed to decode %s:%v offset %v: partition", msg.Topic, msg.Partition, msg.Offset)
+			log.Warnf("Failed to decode %s:%v offset %v: partition. Error: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			return
 		}
 	case 2:
@@ -420,22 +424,22 @@ func (client *KafkaClient) RefreshConsumerOffset(msg *sarama.ConsumerMessage) {
 	buf = bytes.NewBuffer(msg.Value)
 	err = binary.Read(buf, binary.BigEndian, &valver)
 	if (err != nil) || ((valver != 0) && (valver != 1)) {
-		log.Warnf("Failed to decode %s:%v offset %v: valver %v", msg.Topic, msg.Partition, msg.Offset, valver)
+		decodeWarning(fmt.Sprintf("valver:%v", valver), msg, err)
 		return
 	}
 	err = binary.Read(buf, binary.BigEndian, &offset)
 	if err != nil {
-		log.Warnf("Failed to decode %s:%v offset %v: offset", msg.Topic, msg.Partition, msg.Offset)
+		decodeWarning("offset", msg, err)
 		return
 	}
 	_, err = readString(buf)
 	if err != nil {
-		log.Warnf("Failed to decode %s:%v offset %v: metadata", msg.Topic, msg.Partition, msg.Offset)
+		decodeWarning("metadata", msg, err)
 		return
 	}
 	err = binary.Read(buf, binary.BigEndian, &timestamp)
 	if err != nil {
-		log.Warnf("Failed to decode %s:%v offset %v: timestamp", msg.Topic, msg.Partition, msg.Offset)
+		decodeWarning("timestamp", msg, err)
 		return
 	}
 
